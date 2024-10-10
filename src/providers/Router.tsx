@@ -1,0 +1,41 @@
+import { Login } from "@/pages/Login";
+import { useContext } from "react";
+import {
+  createBrowserRouter,
+  Navigate,
+  RouterProvider,
+} from "react-router-dom";
+import { AuthContext } from "./AuthProvider";
+import { Home } from "@/pages/Home";
+import { Devices } from "@/pages/Devices";
+
+export const paths = {
+  LOGIN: "/login",
+  HOME: "/",
+  DEVICES: "/devices",
+};
+
+export const Router = () => {
+  const user = useContext(AuthContext);
+  const isLogged = !!user;
+
+  const router = createBrowserRouter([
+    {
+      path: paths.LOGIN,
+
+      element: isLogged ? <Navigate to={paths.HOME} /> : <Login />,
+    },
+    {
+      path: paths.HOME,
+      element: isLogged ? <Home /> : <Navigate to={paths.LOGIN} />,
+      children: [
+        {
+          path: paths.DEVICES,
+          element: <Devices />,
+        },
+      ],
+    },
+  ]);
+
+  return <RouterProvider router={router} />;
+};
