@@ -1,9 +1,10 @@
-import { ConfigProvider } from "antd";
+import { ConfigProvider, theme } from "antd";
 
 export const ThemeProvider = ({ children }: { children: JSX.Element }) => {
   return (
     <ConfigProvider
       theme={{
+        algorithm: theme.darkAlgorithm,
         token: {
           colorPrimary: "#c8fd42",
         },
