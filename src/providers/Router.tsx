@@ -8,7 +8,7 @@ import { AuthContext } from "./AuthProvider";
 
 import { Login } from "../pages/Login";
 import { Home } from "../pages/Home";
-import { Devices } from "./Devices";
+import { Devices } from "../pages/Devices";
 
 export const paths = {
   LOGIN: "/login",
