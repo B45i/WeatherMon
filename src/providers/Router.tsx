@@ -1,4 +1,3 @@
-import { Login } from "@/pages/Login";
 import { useContext } from "react";
 import {
   createBrowserRouter,
@@ -6,8 +5,10 @@ import {
   RouterProvider,
 } from "react-router-dom";
 import { AuthContext } from "./AuthProvider";
-import { Home } from "@/pages/Home";
-import { Devices } from "@/pages/Devices";
+
+import { Login } from "../pages/Login";
+import { Home } from "../pages/Home";
+import { Devices } from "./Devices";
 
 export const paths = {
   LOGIN: "/login",
