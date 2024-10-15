@@ -25,15 +25,15 @@ export const DeviceCard = ({ device }: { device: Device }) => {
       <div className="grow flex items-center text-xl gap-1">
         <div className="grow justify-center flex items-center">
           <FaTemperatureQuarter />
-          {device.temperature ?? "N/A"} °C
+          {device.temperature ?? "N/A "}°C
         </div>
         <div className="grow justify-center flex items-center border-x  border-background-lighter ">
           <FaDroplet />
-          {device.humidity ?? "N/A"}%
+          {device.humidity ?? "N/A "}%
         </div>
         <div className="grow justify-center text-center flex items-center">
           <MdBattery2Bar />
-          {device.battery ?? "N/A"}V
+          {device.battery ?? "N/A "}v
         </div>
       </div>
       <div className="text-sm text-gray-500">
