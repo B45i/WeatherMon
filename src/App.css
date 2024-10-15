@@ -1,0 +1,17 @@
+.card-bg {
+  background: radial-gradient(
+      200% 100% at 100% 10%,
+      rgba(147, 129, 255, 0.2) 0%,
+      rgba(41, 41, 41, 0.5) 60.8%
+    ),
+    #292929;
+}
+
+.card-bg:hover {
+  background: radial-gradient(
+      150% 90% at 100% 10%,
+      rgba(147, 129, 255, 0.2) 0%,
+      rgba(41, 41, 41, 0.5) 60.8%
+    ),
+    #292929;
+}

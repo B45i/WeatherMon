@@ -7,7 +7,7 @@ import { MdBattery2Bar } from "react-icons/md";
 
 export const DeviceCard = ({ device }: { device: Device }) => {
   return (
-    <div className="rounded-3xl overflow-hidden bg-background h-[200px] text-white p-4 flex flex-col group cursor-pointer hover:scale-105 transition-all">
+    <div className="rounded-3xl card-bg overflow-hidden bg-background h-[200px] text-white p-4 flex flex-col group cursor-pointer hover:scale-105 transition-all">
       <div className="flex items-center gap-4 text-lg">
         <div className="border border-background-lighter h-12 w-12 rounded-full grid place-content-center text-2xl">
           <FaMicrochip />
