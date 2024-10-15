@@ -22,5 +22,6 @@ export const getDevices = async () => {
     id: doc.id,
     ...doc.data(),
     createdAt: doc.data().createdAt.toDate(),
+    lastSeen: doc.data().lastSeen?.toDate(),
   }));
 };

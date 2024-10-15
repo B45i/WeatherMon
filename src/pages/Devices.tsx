@@ -1,9 +1,10 @@
-import { FloatButton, Table } from "antd";
+import { FloatButton, Table, Tooltip } from "antd";
 import { useState } from "react";
 import { DeviceEditor } from "../components/DeviceEditor";
 import { getDevices } from "../services/  sensor-node.service";
 import { useQuery } from "@tanstack/react-query";
 import { FaPlus } from "react-icons/fa6";
+import dayjs from "dayjs";
 
 const columns = [
   {
@@ -12,13 +13,34 @@ const columns = [
     key: "name",
   },
   {
-    title: "API Key",
-    dataIndex: "apiKey",
+    title: "Last Seen",
+    dataIndex: "lastSeen",
+    render: (value: any) => {
+      if (!value) {
+        return "Never";
+      }
+
+      return (
+        <Tooltip title={dayjs(value).format("YYYY-MM-DD hh:mm A")}>
+          {dayjs(value).fromNow()}
+        </Tooltip>
+      );
+    },
   },
   {
-    title: "Created At",
-    dataIndex: "createdAt",
-    render: (value: any) => value?.toLocaleString(),
+    title: "Humidity",
+    dataIndex: "humidity",
+    key: "humidity",
+  },
+  {
+    title: "Temperature",
+    dataIndex: "temperature",
+    key: "temperature",
+  },
+  {
+    title: "Battery",
+    dataIndex: "battery",
+    key: "battery",
   },
 ];
 

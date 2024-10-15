@@ -1,6 +1,7 @@
 # https://marketplace.visualstudio.com/items?itemName=humao.rest-client
 
-@url = http://localhost:5001/fire-next-6ce5d/us-central1/logSensorData
+# @url = http://localhost:5001/fire-next-6ce5d/us-central1/logSensorData
+@url = https://logsensordata-mo6xjx5ntq-uc.a.run.app
 
 POST {{url}}
 Content-Type: application/json
