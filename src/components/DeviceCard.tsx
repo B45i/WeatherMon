@@ -8,7 +8,7 @@ import { IoHardwareChipOutline } from "react-icons/io5";
 
 export const DeviceCard = ({ device }: { device: Device }) => {
   return (
-    <div className="rounded-3xl card-bg overflow-hidden bg-background h-[200px] text-white p-4 flex flex-col group cursor-pointer hover:scale-105 transition-all">
+    <div className="rounded-3xl card-bg overflow-hidden bg-background h-[12rem] text-white p-4 flex flex-col group cursor-pointer hover:scale-105 transition-all">
       <div className="flex items-center gap-4 text-lg">
         <div className="border border-background-lighter h-12 w-12 rounded-full grid place-content-center text-2xl">
           <IoHardwareChipOutline />
@@ -19,7 +19,7 @@ export const DeviceCard = ({ device }: { device: Device }) => {
         >
           {device.name}
         </div>
-        <div className="bg-white h-12 w-12 rounded-full grid place-content-center text-xl transition-all text-background group-hover:bg-primary">
+        <div className="bg-white h-12 w-12 rounded-full grid place-content-center text-xl transition-all text-background group-hover:bg-secondary">
           <GoLinkExternal />
         </div>
       </div>

@@ -27,7 +27,7 @@ export const Devices = () => {
       {deviceQuery.isLoading ? (
         <div>Loading...</div>
       ) : (
-        <div className="grow auto-rows-min grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4">
+        <div className="grow auto-rows-min grid grid-cols-[repeat(auto-fill,minmax(22rem,1fr))] gap-4">
           {deviceQuery.data?.map((device: any) => (
             <DeviceCard device={device} key={device.id} />
           ))}
