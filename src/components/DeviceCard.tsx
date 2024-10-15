@@ -1,16 +1,17 @@
-import { FaDroplet, FaMicrochip, FaTemperatureQuarter } from "react-icons/fa6";
+import { FaDroplet, FaTemperatureQuarter } from "react-icons/fa6";
 import { Device } from "../types";
 import { GoLinkExternal } from "react-icons/go";
 import dayjs from "dayjs";
 import { Tooltip } from "antd";
 import { MdBattery2Bar } from "react-icons/md";
+import { IoHardwareChipOutline } from "react-icons/io5";
 
 export const DeviceCard = ({ device }: { device: Device }) => {
   return (
     <div className="rounded-3xl card-bg overflow-hidden bg-background h-[200px] text-white p-4 flex flex-col group cursor-pointer hover:scale-105 transition-all">
       <div className="flex items-center gap-4 text-lg">
         <div className="border border-background-lighter h-12 w-12 rounded-full grid place-content-center text-2xl">
-          <FaMicrochip />
+          <IoHardwareChipOutline />
         </div>
         <div
           title={device.name}
