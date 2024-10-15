@@ -21,8 +21,11 @@ export default {
           900: "#164E63",
         },
         background: {
-          DEFAULT: "#111827",
-          lighter: "#1F2937",
+          DEFAULT: "#292929",
+          light: "#3a3a3a",
+          lighter: "#4a4a4a",
+          dark: "#1f1f1f",
+          darker: "#151515",
         },
         surface: "#374151",
         text: {
