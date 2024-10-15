@@ -1,0 +1,13 @@
+# https://marketplace.visualstudio.com/items?itemName=humao.rest-client
+
+@url = http://localhost:5001/fire-next-6ce5d/us-central1/logSensorData
+
+POST {{url}}
+Content-Type: application/json
+
+{
+  "deviceId": "3h6H8TQzRYJJkUhxMhfK",
+  "temperature": 25.5,
+  "humidity": 60,
+  "battery": 85
+}

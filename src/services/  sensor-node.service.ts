@@ -4,7 +4,7 @@ import {
   serverTimestamp,
   getDocs,
 } from "firebase/firestore";
-import shortUUID from "short-uuid";
+
 import { auth, COLLECTIONS, db } from "../firebase";
 
 export const addSensorNode = async (node: any) => {
@@ -12,7 +12,6 @@ export const addSensorNode = async (node: any) => {
     ...node,
     createdAt: serverTimestamp(),
     createdBy: auth.currentUser?.uid,
-    apiKey: shortUUID.generate(),
   });
   return docRef.firestore.toJSON();
 };
