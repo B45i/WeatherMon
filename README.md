@@ -1,3 +1,8 @@
+# Hosting
+
+firebase init hosting
+npm run deplot
+
 # Main dashboard
 
 - Highest/Lowest temperature/humidity today.
