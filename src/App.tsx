@@ -4,7 +4,13 @@ import { AuthProvider } from "./providers/AuthProvider";
 import { Router } from "./providers/Router";
 import { ThemeProvider } from "./providers/Theme";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 function App() {
   return (

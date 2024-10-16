@@ -3,6 +3,8 @@ import {
   addDoc,
   serverTimestamp,
   getDocs,
+  query,
+  orderBy,
 } from "firebase/firestore";
 
 import { auth, COLLECTIONS, db } from "../firebase";
@@ -17,7 +19,11 @@ export const addSensorNode = async (node: any) => {
 };
 
 export const getDevices = async () => {
-  const querySnapshot = await getDocs(collection(db, COLLECTIONS.NODES));
+  const deviceQuery = query(
+    collection(db, COLLECTIONS.NODES),
+    orderBy("name", "asc")
+  );
+  const querySnapshot = await getDocs(deviceQuery);
   return querySnapshot.docs.map((doc) => ({
     id: doc.id,
     ...doc.data(),
