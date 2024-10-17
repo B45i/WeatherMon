@@ -9,6 +9,7 @@ import { AuthContext } from "./AuthProvider";
 import { Login } from "../pages/Login";
 import { Home } from "../pages/Home";
 import { Devices } from "../pages/Devices";
+import { Dashboard } from "../pages/Dashboard";
 
 export const paths = {
   LOGIN: "/login",
@@ -30,6 +31,10 @@ export const Router = () => {
       path: paths.HOME,
       element: isLogged ? <Home /> : <Navigate to={paths.LOGIN} />,
       children: [
+        {
+          path: "/",
+          element: <Dashboard />,
+        },
         {
           path: paths.DEVICES,
           element: <Devices />,
