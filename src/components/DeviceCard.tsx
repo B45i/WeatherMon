@@ -5,10 +5,17 @@ import dayjs from "dayjs";
 import { Tooltip } from "antd";
 import { MdBattery2Bar } from "react-icons/md";
 import { IoHardwareChipOutline } from "react-icons/io5";
+import { useNavigate } from "react-router-dom";
+import { paths } from "../providers/Router";
 
 export const DeviceCard = ({ device }: { device: Device }) => {
+  const navigate = useNavigate();
+
   return (
-    <div className="rounded-3xl card-bg overflow-hidden bg-background h-[12rem]_ text-white p-4 flex flex-col group cursor-pointer hover:scale-105 transition-all">
+    <div
+      onClick={() => navigate(`${paths.DEVICE}${device.id}`)}
+      className="rounded-3xl card-bg overflow-hidden bg-background h-[12rem]_ text-white p-4 flex flex-col group cursor-pointer hover:scale-105 transition-all"
+    >
       <div className="flex items-center gap-4 text-lg">
         <div className="border border-background-lighter h-12 w-12 rounded-full grid place-content-center text-2xl">
           <IoHardwareChipOutline />
