@@ -1,6 +1,6 @@
 import { Form, Input, Modal } from "antd";
 import { useState } from "react";
-import { addSensorNode } from "../services/  sensor-node.service";
+import { addSensorNode } from "../services/device.service";
 
 export const DeviceEditor = ({
   isOpen,

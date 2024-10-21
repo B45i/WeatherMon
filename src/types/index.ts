@@ -9,3 +9,7 @@ export type Device = {
   createdAt: string;
   apiKey: string;
 };
+
+export type TimePeriod = "today" | "lastWeek" | "lastMonth" | "lastYear";
+
+export type ValueKeys = "temperature" | "humidity" | "battery";

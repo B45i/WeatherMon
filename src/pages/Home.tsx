@@ -6,7 +6,6 @@ import { AuthContext } from "../providers/AuthProvider";
 
 export const Home = () => {
   const user = useContext(AuthContext);
-  console.log(user);
 
   return (
     <div className="flex flex-col h-screen w-screen bg-[#1f1f1f]">

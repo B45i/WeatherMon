@@ -14,3 +14,20 @@ npm run deplot
 - Temp heatmap
 - Humidity heatmap
 - temp, humidity, bat history (for selected period)
+
+# Create index
+
+```
+  Collection ID: SensorData
+
+| Field       | Order      |
+|-------------|------------|
+| lastSeen    | Descending |
+| temperature | Ascending  |
+| humidity    | Ascending  |
+| battery     | Ascending  |
+| temperature | Descending |
+| humidity    | Descending |
+| battery     | Descending |
+
+```

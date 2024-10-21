@@ -1,7 +1,7 @@
 import { FloatButton } from "antd";
 import { useState } from "react";
 import { DeviceEditor } from "../components/DeviceEditor";
-import { getDevices } from "../services/  sensor-node.service";
+import { getDevices } from "../services/device.service";
 import { useQuery } from "@tanstack/react-query";
 import { FaPlus } from "react-icons/fa6";
 
