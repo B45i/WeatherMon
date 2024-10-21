@@ -13,10 +13,11 @@ import {
 } from "firebase/firestore";
 
 import { auth, COLLECTIONS, db } from "../firebase";
-import { Device, TimePeriod, ValueKeys } from "../types";
+import { Device, DeviceData, TimePeriod, ValueKeys } from "../types";
 import { getStartTime } from "../utils";
 
 const deviceCollection = collection(db, COLLECTIONS.NODES);
+const sensorDataCollection = collection(db, COLLECTIONS.SENSOR_DATA);
 
 export const addSensorNode = async (node: Device) => {
   const docRef = await addDoc(deviceCollection, {
@@ -62,15 +63,17 @@ export const maxMinStats = async (
   key: ValueKeys,
   timePeriod: TimePeriod,
   extremaType: "max" | "min"
-) => {
+): Promise<DeviceData> => {
   const order = extremaType === "max" ? "desc" : "asc";
+
   const valQuery = query(
-    deviceCollection,
-    where("lastSeen", ">=", Timestamp.fromDate(getStartTime(timePeriod))),
+    sensorDataCollection,
+    where("deviceId", "==", id),
+    where("timestamp", ">=", Timestamp.fromDate(getStartTime(timePeriod))),
     orderBy(key, order),
     limit(1)
   );
   const querySnapshot = await getDocs(valQuery);
-  const val = querySnapshot.docs[0].data();
-  return val;
+  const val = querySnapshot.docs[0]?.data();
+  return { ...val, timestamp: val?.timestamp.toDate() } as DeviceData;
 };

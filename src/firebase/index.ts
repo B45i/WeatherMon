@@ -17,6 +17,7 @@ const db = getFirestore(app);
 
 const COLLECTIONS = {
   NODES: "SensorNodes",
+  SENSOR_DATA: "SensorData",
 };
 
 export { auth, app, db, COLLECTIONS };

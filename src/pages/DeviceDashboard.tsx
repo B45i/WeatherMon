@@ -7,20 +7,21 @@ export const DeviceDashboard = () => {
   getDevice(id!);
 
   const getData = async () => {
-    const minTemp = await maxMinStats(id!, "temperature", "lastMonth", "min");
-    const maxTemp = await maxMinStats(id!, "temperature", "lastMonth", "max");
-    const maxHumid = await maxMinStats(id!, "humidity", "lastMonth", "max");
-    const minHumid = await maxMinStats(id!, "humidity", "lastMonth", "min");
-    const maxBattery = await maxMinStats(id!, "battery", "lastMonth", "max");
-    const minBattery = await maxMinStats(id!, "battery", "lastMonth", "min");
-
-    console.log({
-      minTemp,
-      maxTemp,
-      maxHumid,
-      minHumid,
-      maxBattery,
-      minBattery,
+    const x = [
+      () => maxMinStats(id!, "temperature", "lastYear", "min"),
+      () => maxMinStats(id!, "temperature", "lastYear", "max"),
+      () => maxMinStats(id!, "humidity", "lastYear", "max"),
+      () => maxMinStats(id!, "humidity", "lastYear", "min"),
+      () => maxMinStats(id!, "battery", "lastYear", "max"),
+      () => maxMinStats(id!, "battery", "lastYear", "min"),
+    ];
+    x.forEach(async (func) => {
+      try {
+        const data = await func();
+        console.log(data);
+      } catch (error) {
+        console.error(error);
+      }
     });
   };
 

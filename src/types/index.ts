@@ -13,3 +13,11 @@ export type Device = {
 export type TimePeriod = "today" | "lastWeek" | "lastMonth" | "lastYear";
 
 export type ValueKeys = "temperature" | "humidity" | "battery";
+
+export type DeviceData = {
+  battery: string;
+  temperature: string;
+  deviceId: string;
+  humidity: string;
+  timestamp: string;
+};
