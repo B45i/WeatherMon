@@ -7,12 +7,12 @@ export const DeviceDashboard = () => {
   getDevice(id!);
 
   const getData = async () => {
-    const minTemp = maxMinStats(id!, "temperature", "lastMonth", "min");
-    const maxTemp = maxMinStats(id!, "temperature", "lastMonth", "max");
-    const maxHumid = maxMinStats(id!, "humidity", "lastMonth", "max");
-    const minHumid = maxMinStats(id!, "humidity", "lastMonth", "min");
-    const maxBattery = maxMinStats(id!, "battery", "lastMonth", "max");
-    const minBattery = maxMinStats(id!, "battery", "lastMonth", "min");
+    const minTemp = await maxMinStats(id!, "temperature", "lastMonth", "min");
+    const maxTemp = await maxMinStats(id!, "temperature", "lastMonth", "max");
+    const maxHumid = await maxMinStats(id!, "humidity", "lastMonth", "max");
+    const minHumid = await maxMinStats(id!, "humidity", "lastMonth", "min");
+    const maxBattery = await maxMinStats(id!, "battery", "lastMonth", "max");
+    const minBattery = await maxMinStats(id!, "battery", "lastMonth", "min");
 
     console.log({
       minTemp,
