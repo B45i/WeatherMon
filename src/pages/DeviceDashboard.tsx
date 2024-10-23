@@ -1,34 +1,35 @@
 import { useParams } from "react-router-dom";
 // import { getDevice, maxMinStats } from "../services/device.service";
 import { DeviceInfoCard } from "../components/DeviceInfoCard";
+import { Select } from "antd";
+import { DeviceExtremaCard } from "../components/DeviceExtremaCard";
+import { useState } from "react";
+import { TimePeriod } from "../types";
 
 export const DeviceDashboard = () => {
   const { id } = useParams();
-
-  // const getData = async () => {
-  //   const x = [
-  //     () => maxMinStats(id!, "temperature", "lastYear", "min"),
-  //     () => maxMinStats(id!, "temperature", "lastYear", "max"),
-  //     () => maxMinStats(id!, "humidity", "lastYear", "max"),
-  //     () => maxMinStats(id!, "humidity", "lastYear", "min"),
-  //     () => maxMinStats(id!, "battery", "lastYear", "max"),
-  //     () => maxMinStats(id!, "battery", "lastYear", "min"),
-  //   ];
-  //   x.forEach(async (func) => {
-  //     try {
-  //       const data = await func();
-  //       console.log(data);
-  //     } catch (error) {
-  //       console.error(error);
-  //     }
-  //   });
-  // };
-
-  // getData();
+  const [period, setPeriod] = useState<TimePeriod>("today");
 
   return (
     <div className="grow w-full h-full relative auto-rows-[12rem] grid grid-cols-[repeat(auto-fill,minmax(22rem,1fr))] gap-4">
       <DeviceInfoCard id={id!} />
+      <div className="col-span-2 flex flex-col gap-2">
+        <div className="flex items-center gap-4">
+          <div className="text-background-lighter">Period:</div>
+          <Select
+            value={period}
+            onChange={(val) => setPeriod(val)}
+            className="w-full"
+          >
+            <Select.Option value="today">Today</Select.Option>
+            <Select.Option value="lastWeek">Last Week</Select.Option>
+            <Select.Option value="lastMonth">Last Month</Select.Option>
+            <Select.Option value="lastYear">Last Year</Select.Option>
+          </Select>
+        </div>
+
+        <DeviceExtremaCard deviceId={id!} period={period} />
+      </div>
     </div>
   );
 };
