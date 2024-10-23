@@ -77,3 +77,24 @@ export const maxMinStats = async (
   const val = querySnapshot.docs[0]?.data();
   return { ...val, timestamp: val?.timestamp.toDate() } as DeviceData;
 };
+
+export const getDeviceTimeSeriesData = async (
+  id: string,
+  timePeriod: TimePeriod
+): Promise<Array<DeviceData>> => {
+  const valQuery = query(
+    sensorDataCollection,
+    where("deviceId", "==", id),
+    where("timestamp", ">=", Timestamp.fromDate(getStartTime(timePeriod))),
+    orderBy("timestamp", "asc")
+  );
+
+  const querySnapshot = await getDocs(valQuery);
+  return querySnapshot.docs.map(
+    (doc) =>
+      ({
+        ...doc.data(),
+        timestamp: doc.data().timestamp.toDate(),
+      } as DeviceData)
+  );
+};

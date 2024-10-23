@@ -32,8 +32,6 @@ export const DeviceExtremaCard = ({
     queryFn: () => maxMinStats(deviceId!, "humidity", period, "min"),
   });
 
-  console.log("data", highestTempQuery.data, period);
-
   return (
     <div className="bg-background-darker grow rounded-3xl p-4 flex text-white">
       <div className="grow">

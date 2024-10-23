@@ -15,13 +15,13 @@ const nodesCollection = db.collection(COLLECTIONS.NODES);
 const sensorDataCollection = db.collection(COLLECTIONS.SENSOR_DATA);
 
 export const logSensorData = onRequest(async (request, response) => {
-  const { deviceId, temperature, humidity, battery } = request.body;
+  const { deviceId } = request.body;
 
   if (
     !deviceId ||
-    temperature === undefined ||
-    humidity === undefined ||
-    battery === undefined
+    request.body?.temperature === undefined ||
+    request.body?.humidity === undefined ||
+    request.body?.battery === undefined
   ) {
     response.status(400).send("Missing required fields.");
     return;
@@ -36,6 +36,10 @@ export const logSensorData = onRequest(async (request, response) => {
     response.status(404).send("Node not found.");
     return;
   }
+
+  const temperature = parseFloat(request.body.temperature);
+  const humidity = parseFloat(request.body.humidity);
+  const battery = parseFloat(request.body.battery);
 
   try {
     await nodeRef.update({

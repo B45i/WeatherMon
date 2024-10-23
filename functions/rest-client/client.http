@@ -7,7 +7,7 @@ POST {{url}}
 Content-Type: application/json
 
 {
-  "deviceId": "3h6H8TQzRYJJkUhxMhfK",
+  "deviceId": "pd5qBQOHtbDHSkvlnTFA",
   "temperature": 25.5,
   "humidity": 60,
   "battery": 85
