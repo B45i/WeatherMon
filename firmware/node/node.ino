@@ -12,9 +12,17 @@ struct DataPacket {
 
 DataPacket dataPacket;
 const char *macFile = "/hub_mac.conf";
-uint8_t esp32Mac[6];
+uint8_t hubMac[6];
 bool macReceived = false;
 
+
+void printMac(const uint8_t *mac) {
+     for (int i = 0; i < 6; i++) {
+      Serial.printf("%02X", mac[i]);
+      if (i < 5) Serial.print(":");
+    }
+    Serial.println();
+}
 
 void saveMacToFlash(const uint8_t *mac) {
   File file = LittleFS.open(macFile, "w+");
@@ -42,15 +50,11 @@ bool loadMacFromFlash(uint8_t *mac) {
 void onDataReceive(uint8_t *macAddr, uint8_t *incomingData, uint8_t len) {
   Serial.println("Data received");
   if (len == 6) {
-    memcpy(esp32Mac, incomingData, 6);
+    memcpy(hubMac, incomingData, 6);
     macReceived = true;
-    Serial.println("MAC address received from ESP32:");
-    saveMacToFlash(esp32Mac);
-    for (int i = 0; i < 6; i++) {
-      Serial.printf("%02X", esp32Mac[i]);
-      if (i < 5) Serial.print(":");
-    }
-    Serial.println();
+    Serial.println("MAC address received from HUB:");
+    saveMacToFlash(hubMac);
+    printMac(hubMac);
   }
 }
 
@@ -74,25 +78,43 @@ void setupEspNow() {
 void sendMacRequestBroadcast() {
   Serial.println("Sending broadcast to request MAC address...");
   uint8_t broadcastAddress[] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };  // Broadcast address
-  esp_now_add_peer(broadcastAddress, ESP_NOW_ROLE_COMBO, 1, NULL, 0);
+  if (!esp_now_is_peer_exist(broadcastAddress)) {
+    if (esp_now_add_peer(broadcastAddress, ESP_NOW_ROLE_COMBO, 1, NULL, 0) != 0) {
+      Serial.println("Failed to add peer");
+      return;
+    }
+  } else {
+    Serial.println("Peer exists.");
+  }
+
   esp_now_send(broadcastAddress, (uint8_t *)&dataPacket, sizeof(dataPacket));
 }
 
 void sendDataToHub() {
   Serial.println("Sending data to hub...");
-  esp_now_send(esp32Mac, (uint8_t *)&dataPacket, sizeof(dataPacket));
+  int status = esp_now_send(hubMac, (uint8_t *)&dataPacket, sizeof(dataPacket));
+  if (status != 0) {
+    Serial.print("Error sending data to hub: ");
+    Serial.println(status);
+  }
 }
 
 void setup() {
   Serial.begin(115200);
-  LittleFS.begin();
+  if (!LittleFS.begin()) {
+    Serial.println("Failed to mount LittleFS filesystem");
+    return;
+  }
   WiFi.mode(WIFI_STA);
   setupEspNow();
 
-  if (loadMacFromFlash(esp32Mac)) {
-    Serial.println("Loaded MAC from flash.");
+  if (loadMacFromFlash(hubMac)) {
+    Serial.print("Loaded MAC from flash: ");
+    printMac(hubMac);
     macReceived = true;
     // addHubAsPeer();
+  } else {
+    Serial.println("Flash don't have hub MAC");
   }
 }
 
