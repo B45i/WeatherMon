@@ -12,9 +12,10 @@ enum PacketType {
 
 struct DataPacket {
   PacketType packetType = PACKET_TYPE_SENSOR_DATA;
+  float temperature = 26.0;
   float humidity = 60.0;
   float batteryVoltage = 3.7;
-  uint32_t deviceId = 12345678;
+  char deviceId[16];
 };
 
 
@@ -119,6 +120,7 @@ void sendMacRequestBroadcast() {
 void sendDataToHub() {
   DataPacket dataPacket;
   dataPacket.packetType = PACKET_TYPE_SENSOR_DATA;
+  strncpy(dataPacket.deviceId, "NewDevice123", sizeof(dataPacket.deviceId));
   Serial.println("Sending data to hub...");
   int status = esp_now_send(hubMac, (uint8_t *)&dataPacket, sizeof(dataPacket));
   if (status != 0) {
@@ -129,6 +131,7 @@ void sendDataToHub() {
 
 
 void setup() {
+  // pinMode(LED_BUILTIN, OUTPUT);
   Serial.begin(115200);
   if (!LittleFS.begin()) {
     Serial.println("Failed to mount LittleFS filesystem");

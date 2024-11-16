@@ -12,7 +12,7 @@ struct DataPacket {
   float temperature;
   float humidity;
   float batteryVoltage;
-  uint32_t deviceId;
+  char deviceId[16] = {};
 };
 
 void handleMacRequest(const uint8_t *srcAddr) {
@@ -28,7 +28,7 @@ void handleMacRequest(const uint8_t *srcAddr) {
 }
 
 void handleSensorData(const uint8_t *incomingData) {
-  DataPacket dataPacket;
+  DataPacket dataPacket = {};
   memcpy(&dataPacket, incomingData, sizeof(DataPacket));
   Serial.print("Temperature: ");
   Serial.println(dataPacket.temperature);
