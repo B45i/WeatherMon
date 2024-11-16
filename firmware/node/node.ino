@@ -3,25 +3,31 @@
 #include <espnow.h>
 #include <LittleFS.h>
 
-struct DataPacket {
-  float temperature = 25.5;      // Placeholder temperature
-  float humidity = 60.0;         // Placeholder humidity
-  float batteryVoltage = 3.7;    // Placeholder battery voltage
-  uint32_t deviceId = 12345678;  // Placeholder device ID
+
+enum PacketType {
+  REQUEST_MAC = 1,  // MAC address request
+  SENSOR_DATA = 2   // Actual sensor data
 };
 
-DataPacket dataPacket;
+struct DataPacket {
+  PacketType packetType = SENSOR_DATA;  // Default to sensor data
+  float humidity = 60.0;                // Placeholder humidity
+  float batteryVoltage = 3.7;           // Placeholder battery voltage
+  uint32_t deviceId = 12345678;         // Placeholder device ID
+};
+
 const char *macFile = "/hub_mac.conf";
 uint8_t hubMac[6];
 bool macReceived = false;
 
 
+
 void printMac(const uint8_t *mac) {
-     for (int i = 0; i < 6; i++) {
-      Serial.printf("%02X", mac[i]);
-      if (i < 5) Serial.print(":");
-    }
-    Serial.println();
+  for (int i = 0; i < 6; i++) {
+    Serial.printf("%02X", mac[i]);
+    if (i < 5) Serial.print(":");
+  }
+  Serial.println();
 }
 
 void saveMacToFlash(const uint8_t *mac) {
@@ -59,7 +65,7 @@ void onDataReceive(uint8_t *macAddr, uint8_t *incomingData, uint8_t len) {
 }
 
 void onDataSent(uint8_t *macAddr, uint8_t sendStatus) {
-  Serial.println(sendStatus == 0 ? "Broadcast sent successfully" : "Broadcast failed");
+  Serial.println(sendStatus == 0 ? "Data sent successfully" : "Data sent failed");
   // todo: Intiate re-pairing after few tries, make inbuilt glow if data failed.
 }
 
@@ -78,6 +84,9 @@ void setupEspNow() {
 void sendMacRequestBroadcast() {
   Serial.println("Sending broadcast to request MAC address...");
   uint8_t broadcastAddress[] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };  // Broadcast address
+  DataPacket dataPacket;
+  dataPacket.packetType = REQUEST_MAC;
+
   if (!esp_now_is_peer_exist(broadcastAddress)) {
     if (esp_now_add_peer(broadcastAddress, ESP_NOW_ROLE_COMBO, 1, NULL, 0) != 0) {
       Serial.println("Failed to add peer");
@@ -87,10 +96,16 @@ void sendMacRequestBroadcast() {
     Serial.println("Peer exists.");
   }
 
-  esp_now_send(broadcastAddress, (uint8_t *)&dataPacket, sizeof(dataPacket));
+  int status = esp_now_send(broadcastAddress, (uint8_t *)&dataPacket, sizeof(dataPacket));
+   if (status != 0) {
+    Serial.print("Error sending MAC request: ");
+    Serial.println(status);
+  }
 }
 
 void sendDataToHub() {
+  DataPacket dataPacket;
+  dataPacket.packetType = SENSOR_DATA;
   Serial.println("Sending data to hub...");
   int status = esp_now_send(hubMac, (uint8_t *)&dataPacket, sizeof(dataPacket));
   if (status != 0) {
