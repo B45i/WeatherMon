@@ -1,21 +1,19 @@
 // ESP32 Hub
-
 #include <WiFi.h>
 #include <esp_now.h>
 
 enum PacketType {
-  REQUEST_MAC = 1,  // MAC address request
-  SENSOR_DATA = 2   // Actual sensor data
+  PACKET_TYPE_REQUEST_MAC = 1,
+  PACKET_TYPE_SENSOR_DATA = 2
 };
 
 struct DataPacket {
-  PacketType packetType = SENSOR_DATA;
+  PacketType packetType = PACKET_TYPE_SENSOR_DATA;
   float temperature;
   float humidity;
   float batteryVoltage;
   uint32_t deviceId;
 };
-
 
 void handleMacRequest(const uint8_t *srcAddr) {
   uint8_t esp32Mac[6];
@@ -23,12 +21,11 @@ void handleMacRequest(const uint8_t *srcAddr) {
   checkAndAddPeer(srcAddr);
   int status = esp_now_send(srcAddr, esp32Mac, sizeof(esp32Mac));
   if (status != 0) {
-    Serial.println("Failed to sent MAC address back to sender.");
+    Serial.println("Failed to send MAC address back to sender.");
     return;
   }
   Serial.println("Sent MAC address back to sender.");
 }
-
 
 void handleSensorData(const uint8_t *incomingData) {
   DataPacket dataPacket;
@@ -43,20 +40,19 @@ void handleSensorData(const uint8_t *incomingData) {
   Serial.println(dataPacket.deviceId);
 }
 
-
-void checkAndAddPeer(const uint8_t *node_mac) {
-  if (esp_now_is_peer_exist(node_mac)) {
+void checkAndAddPeer(const uint8_t *nodeMac) {
+  if (esp_now_is_peer_exist(nodeMac)) {
     return;
   }
   esp_now_peer_info_t peerInfo = {};
-  memcpy(peerInfo.peer_addr, node_mac, 6);
-  peerInfo.channel = 1;  // Ensure both devices use the same Wi-Fi channel
+  memcpy(peerInfo.peer_addr, nodeMac, 6);
+  peerInfo.channel = 1;
   peerInfo.encrypt = false;
   if (esp_now_add_peer(&peerInfo) == ESP_OK) {
-    Serial.println("ESP8266 added as peer.");
+    Serial.println("Node added as peer.");
     return;
   }
-  Serial.println("Failed to add ESP8266 as peer.");
+  Serial.println("Failed to add Node as peer.");
 }
 
 void onDataReceive(const esp_now_recv_info *recvInfo, const uint8_t *incomingData, int len) {
@@ -66,16 +62,17 @@ void onDataReceive(const esp_now_recv_info *recvInfo, const uint8_t *incomingDat
   Serial.print("Data received, packetType: ");
   Serial.println(incomingPacket.packetType);
 
-  if (incomingPacket.packetType == REQUEST_MAC) {
+  if (incomingPacket.packetType == PACKET_TYPE_REQUEST_MAC) {
     handleMacRequest(recvInfo->src_addr);
-  } else if (incomingPacket.packetType == SENSOR_DATA) {
-      handleSensorData(incomingData);
-    }
+  } else if (incomingPacket.packetType == PACKET_TYPE_SENSOR_DATA) {
+    handleSensorData(incomingData);
+  }
 }
 
 void setup() {
   Serial.begin(115200);
   WiFi.mode(WIFI_STA);
+
   if (esp_now_init() != ESP_OK) {
     Serial.println("Error initializing ESP-NOW");
     return;
