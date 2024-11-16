@@ -5,21 +5,22 @@
 
 
 enum PacketType {
-  REQUEST_MAC = 1,  // MAC address request
-  SENSOR_DATA = 2   // Actual sensor data
+  PACKET_TYPE_REQUEST_MAC = 1,
+  PACKET_TYPE_SENSOR_DATA = 2
 };
+
 
 struct DataPacket {
-  PacketType packetType = SENSOR_DATA;  // Default to sensor data
-  float humidity = 60.0;                // Placeholder humidity
-  float batteryVoltage = 3.7;           // Placeholder battery voltage
-  uint32_t deviceId = 12345678;         // Placeholder device ID
+  PacketType packetType = PACKET_TYPE_SENSOR_DATA;
+  float humidity = 60.0;
+  float batteryVoltage = 3.7;
+  uint32_t deviceId = 12345678;
 };
 
-const char *macFile = "/hub_mac.conf";
-uint8_t hubMac[6];
-bool macReceived = false;
 
+const char *MAC_FILE = "/hub_mac.conf";
+uint8_t hubMac[6];
+bool isMacReceived = false;
 
 
 void printMac(const uint8_t *mac) {
@@ -30,20 +31,22 @@ void printMac(const uint8_t *mac) {
   Serial.println();
 }
 
+
 void saveMacToFlash(const uint8_t *mac) {
-  File file = LittleFS.open(macFile, "w+");
+  File file = LittleFS.open(MAC_FILE, "w+");
   if (file) {
     file.write(mac, 6);
     file.close();
   }
 }
 
+
 bool loadMacFromFlash(uint8_t *mac) {
-  if (!LittleFS.exists(macFile)) {
+  if (!LittleFS.exists(MAC_FILE)) {
     return false;
   }
 
-  File file = LittleFS.open(macFile, "r");
+  File file = LittleFS.open(MAC_FILE, "r");
   if (!file) {
     return false;
   }
@@ -53,21 +56,23 @@ bool loadMacFromFlash(uint8_t *mac) {
   return true;
 }
 
+
 void onDataReceive(uint8_t *macAddr, uint8_t *incomingData, uint8_t len) {
   Serial.println("Data received");
   if (len == 6) {
     memcpy(hubMac, incomingData, 6);
-    macReceived = true;
+    isMacReceived = true;
     Serial.println("MAC address received from HUB:");
     saveMacToFlash(hubMac);
     printMac(hubMac);
   }
 }
 
+
 void onDataSent(uint8_t *macAddr, uint8_t sendStatus) {
-  Serial.println(sendStatus == 0 ? "Data sent successfully" : "Data sent failed");
-  // todo: Intiate re-pairing after few tries, make inbuilt glow if data failed.
+  Serial.println(sendStatus == 0 ? "Data sent successfully" : "Data send failed");
 }
+
 
 void setupEspNow() {
   Serial.println("Setting up ESP-NOW");
@@ -81,31 +86,39 @@ void setupEspNow() {
   Serial.println("ESP-NOW ready");
 }
 
+
+bool addPeer(uint8_t *macAddress) {
+  if (esp_now_is_peer_exist(macAddress)) {
+    Serial.println("Peer exists.");
+    return true;
+  }
+  if (esp_now_add_peer(macAddress, ESP_NOW_ROLE_COMBO, 1, NULL, 0) != 0) {
+    Serial.println("Failed to add peer.");
+    return false;
+  }
+  Serial.println("Peer added.");
+  return true;
+}
+
+
 void sendMacRequestBroadcast() {
   Serial.println("Sending broadcast to request MAC address...");
-  uint8_t broadcastAddress[] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };  // Broadcast address
+  uint8_t broadcastAddress[] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+  addPeer(broadcastAddress);
+
   DataPacket dataPacket;
-  dataPacket.packetType = REQUEST_MAC;
-
-  if (!esp_now_is_peer_exist(broadcastAddress)) {
-    if (esp_now_add_peer(broadcastAddress, ESP_NOW_ROLE_COMBO, 1, NULL, 0) != 0) {
-      Serial.println("Failed to add peer");
-      return;
-    }
-  } else {
-    Serial.println("Peer exists.");
-  }
-
+  dataPacket.packetType = PACKET_TYPE_REQUEST_MAC;
   int status = esp_now_send(broadcastAddress, (uint8_t *)&dataPacket, sizeof(dataPacket));
-   if (status != 0) {
+  if (status != 0) {
     Serial.print("Error sending MAC request: ");
     Serial.println(status);
   }
 }
 
+
 void sendDataToHub() {
   DataPacket dataPacket;
-  dataPacket.packetType = SENSOR_DATA;
+  dataPacket.packetType = PACKET_TYPE_SENSOR_DATA;
   Serial.println("Sending data to hub...");
   int status = esp_now_send(hubMac, (uint8_t *)&dataPacket, sizeof(dataPacket));
   if (status != 0) {
@@ -113,6 +126,7 @@ void sendDataToHub() {
     Serial.println(status);
   }
 }
+
 
 void setup() {
   Serial.begin(115200);
@@ -126,20 +140,21 @@ void setup() {
   if (loadMacFromFlash(hubMac)) {
     Serial.print("Loaded MAC from flash: ");
     printMac(hubMac);
-    macReceived = true;
-    // addHubAsPeer();
+    addPeer(hubMac);
+    isMacReceived = true;
   } else {
-    Serial.println("Flash don't have hub MAC");
+    Serial.println("Flash does not contain hub MAC");
   }
 }
 
+
 void loop() {
-  if (!macReceived) {
+  if (!isMacReceived) {
     sendMacRequestBroadcast();
-    delay(2000);  // Retry every 2 seconds
+    delay(2000);
   } else {
     Serial.println("MAC address obtained. Ready for direct communication.");
-    delay(5000);  // Pause after obtaining the MAC
+    delay(5000);
     sendDataToHub();
   }
 }
