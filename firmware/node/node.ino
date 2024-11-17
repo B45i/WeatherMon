@@ -2,6 +2,7 @@
 #include <ESP8266WiFi.h>
 #include <espnow.h>
 #include <LittleFS.h>
+#include <DHT.h>
 
 
 enum PacketType {
@@ -18,11 +19,20 @@ struct DataPacket {
   char deviceId[16];
 };
 
+#define DHTPIN 4
+#define DHTTYPE DHT11
+
+#define BATTERY_PIN A0
+#define VOLTAGE_DIVIDER_RATIO 2.0  // 100kΩ & 100kΩ divider halves the voltage
+#define ADC_MAX_VALUE 1023
+#define REFERENCE_VOLTAGE 3.3  // Reference voltage
+
+DHT dht(DHTPIN, DHTTYPE);
 
 const char *MAC_FILE = "/hub_mac.conf";
 uint8_t hubMac[6];
 bool isMacReceived = false;
-const uint64_t deepSleepIntervalMs = 60 * 1000; // 1 min
+const uint64_t deepSleepIntervalMs = 60 * 1000;  // 1 min
 
 
 void printMac(const uint8_t *mac) {
@@ -123,12 +133,23 @@ void sendMacRequestBroadcast() {
   }
 }
 
+float readBatteryVoltage() {
+  int rawValue = analogRead(BATTERY_PIN);
+  float voltage = (rawValue / ADC_MAX_VALUE) * REFERENCE_VOLTAGE * VOLTAGE_DIVIDER_RATIO;
+  return voltage;
+}
+
 
 void sendDataToHub() {
   Serial.println("Sending data to hub.");
+
   DataPacket dataPacket;
   dataPacket.packetType = PACKET_TYPE_SENSOR_DATA;
+  dataPacket.temperature = dht.readTemperature();
+  dataPacket.humidity = dht.readHumidity();
+  dataPacket.batteryVoltage = readBatteryVoltage();
   strncpy(dataPacket.deviceId, "NewDevice123", sizeof(dataPacket.deviceId));
+
   int status = esp_now_send(hubMac, (uint8_t *)&dataPacket, sizeof(dataPacket));
   if (status != 0) {
     Serial.print("Error sending data to hub: ");
@@ -140,10 +161,13 @@ void sendDataToHub() {
 void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
   Serial.begin(115200);
+  dht.begin();
+
   if (!LittleFS.begin()) {
     Serial.println("Failed to mount LittleFS filesystem");
     return;
   }
+
   WiFi.mode(WIFI_STA);
   setupEspNow();
 
