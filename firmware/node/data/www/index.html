@@ -6,7 +6,28 @@
     <title>Device ID Setup</title>
     <script>
       function submitDeviceId() {
-        const deviceId = document.getElementById("deviceId").value;
+        const deviceIdInput = document.getElementById("deviceId");
+        const deviceId = deviceIdInput.value.trim();
+
+        // Validation
+        if (!deviceId) {
+          showMessage("Please enter a Device ID", "error");
+          return;
+        }
+
+        if (deviceId.length < 3) {
+          showMessage("Device ID must be at least 3 characters", "error");
+          return;
+        }
+
+        if (!/^[a-zA-Z0-9-_]+$/.test(deviceId)) {
+          showMessage(
+            "Device ID can only contain letters, numbers, hyphens and underscores",
+            "error"
+          );
+          return;
+        }
+
         fetch(`/rest/update?deviceId=${deviceId}`, {
           method: "POST",
           headers: {
@@ -15,15 +36,111 @@
         })
           .then((response) => response.text())
           .then((data) => {
-            alert("Device ID saved: " + deviceId);
+            showMessage("Device ID saved: " + deviceId, "success");
           })
-          .catch((err) => alert("Error: " + err));
+          .catch((err) => showMessage("Error: " + err, "error"));
+      }
+
+      function showMessage(message, type) {
+        const messageEl = document.getElementById("message");
+        messageEl.textContent = message;
+        messageEl.style.backgroundColor =
+          type === "error" ? "#fee2e2" : "#dcfce7";
+        messageEl.style.color = type === "error" ? "#991b1b" : "#166534";
+        messageEl.style.display = "block";
+        setTimeout(() => {
+          messageEl.style.display = "none";
+        }, 3000);
       }
     </script>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+        background-color: #f3f4f6;
+      }
+
+      .card {
+        background: white;
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        width: 90%;
+        max-width: 400px;
+      }
+
+      h1 {
+        margin: 0 0 1.5rem 0;
+        color: #1f2937;
+        font-size: 1.5rem;
+        font-weight: 600;
+      }
+
+      input {
+        width: 100%;
+        padding: 0.75rem;
+        margin-bottom: 1rem;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        font-size: 1rem;
+        box-sizing: border-box;
+        outline: none;
+        transition: border-color 0.15s ease;
+      }
+
+      input:focus {
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+      }
+
+      button {
+        width: 100%;
+        padding: 0.75rem;
+        background-color: #2563eb;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 1rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.15s ease;
+      }
+
+      button:hover {
+        background-color: #1d4ed8;
+      }
+
+      button:active {
+        background-color: #1e40af;
+      }
+
+      #message {
+        display: none;
+        padding: 0.75rem;
+        border-radius: 6px;
+        margin-bottom: 1rem;
+        font-size: 0.875rem;
+      }
+    </style>
   </head>
   <body>
-    <h1>Enter Device ID</h1>
-    <input type="text" id="deviceId" placeholder="Enter Device ID" required />
-    <button onclick="submitDeviceId()">Save Device ID</button>
+    <div class="card">
+      <h1>Enter Device ID</h1>
+      <div id="message"></div>
+      <input
+        type="text"
+        id="deviceId"
+        placeholder="Enter Device ID"
+        required
+        pattern="[a-zA-Z0-9-_]+"
+        minlength="3"
+      />
+      <button onclick="submitDeviceId()">Save Device ID</button>
+    </div>
   </body>
 </html>

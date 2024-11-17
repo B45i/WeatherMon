@@ -13,7 +13,7 @@
 #define VOLTAGE_DIVIDER_RATIO 2.0  // 100kΩ & 100kΩ divider halves the voltage
 #define ADC_MAX_VALUE 1023
 #define REFERENCE_VOLTAGE 3.3  // Reference voltage
-#define DEVICE_ID_LENGTH 16
+#define DEVICE_ID_LENGTH 21
 #define DEVICE_ID_FILE "/device_id.conf"
 #define MAC_FILE "/hub_mac.conf"
 
@@ -200,12 +200,21 @@ float readBatteryVoltage() {
 void sendDataToHub() {
   Serial.println("Sending data to hub.");
 
-  DataPacket dataPacket;
-  dataPacket.packetType = PACKET_TYPE_SENSOR_DATA;
-  dataPacket.temperature = dht.readTemperature();
-  dataPacket.humidity = dht.readHumidity();
-  dataPacket.batteryVoltage = readBatteryVoltage();
-  strncpy(dataPacket.deviceId, deviceId, sizeof(deviceId));
+  // DataPacket dataPacket;
+  // dataPacket.packetType = PACKET_TYPE_SENSOR_DATA;
+  // dataPacket.temperature = dht.readTemperature();
+  // dataPacket.humidity = dht.readHumidity();
+  // dataPacket.batteryVoltage = readBatteryVoltage();
+  // strncpy(dataPacket.deviceId, deviceId, sizeof(deviceId));
+
+  DataPacket dataPacket = {
+    .packetType = PACKET_TYPE_SENSOR_DATA,
+    .temperature = dht.readTemperature(),
+    .humidity = dht.readHumidity(),
+    .batteryVoltage = readBatteryVoltage()
+  };
+  strncpy(dataPacket.deviceId, deviceId, DEVICE_ID_LENGTH);
+  dataPacket.deviceId[DEVICE_ID_LENGTH - 1] = '\0';  // Ensure null-termination
 
   int status = esp_now_send(hubMac, (uint8_t *)&dataPacket, sizeof(dataPacket));
   if (status != 0) {
@@ -230,7 +239,7 @@ void setup() {
 
   if (loadDeviceIdFromFlash(deviceId)) {
     Serial.print("DeviceId Loaded from flash: ");
-    Serial.print(deviceId);
+    Serial.println(deviceId);
     isDeviceIdSet = true;
   } else {
     Serial.println("Flash does not contain deviceId, setting up webserver");
@@ -250,7 +259,6 @@ void setup() {
     Serial.println("Flash does not contain hub MAC");
   }
 }
-
 
 void loop() {
   if (!isDeviceIdSet) {

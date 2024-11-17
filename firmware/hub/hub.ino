@@ -12,7 +12,7 @@ struct DataPacket {
   float temperature;
   float humidity;
   float batteryVoltage;
-  char deviceId[16] = {};
+  char deviceId[21] = {};
 };
 
 void handleMacRequest(const uint8_t *srcAddr) {
