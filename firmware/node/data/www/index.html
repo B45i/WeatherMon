@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Device ID Setup</title>
+    <script>
+      function submitDeviceId() {
+        const deviceId = document.getElementById("deviceId").value;
+        fetch(`/rest/update?deviceId=${deviceId}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "text/plain",
+          },
+        })
+          .then((response) => response.text())
+          .then((data) => {
+            alert("Device ID saved: " + deviceId);
+          })
+          .catch((err) => alert("Error: " + err));
+      }
+    </script>
+  </head>
+  <body>
+    <h1>Enter Device ID</h1>
+    <input type="text" id="deviceId" placeholder="Enter Device ID" required />
+    <button onclick="submitDeviceId()">Save Device ID</button>
+  </body>
+</html>

@@ -56,3 +56,5 @@ npm run deplot
 
 `esptool.py --port /dev/cu.usbserial-537A0167731 read_flash 0x00000 0x1000 flash_dump.bin`
 `hexdump -C flash_dump.bin | less`
+
+https://chatgpt.com/c/671b3b50-bff0-8009-9d1b-b69190bba654

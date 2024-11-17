@@ -2,22 +2,9 @@
 #include <ESP8266WiFi.h>
 #include <espnow.h>
 #include <LittleFS.h>
+#include <ESPAsyncTCP.h>        // https://github.com/me-no-dev/ESPAsyncTCP
+#include <ESPAsyncWebServer.h>  // https://github.com/me-no-dev/ESPAsyncWebServer?tab=readme-ov-file
 #include <DHT.h>
-
-
-enum PacketType {
-  PACKET_TYPE_REQUEST_MAC = 1,
-  PACKET_TYPE_SENSOR_DATA = 2
-};
-
-
-struct DataPacket {
-  PacketType packetType = PACKET_TYPE_SENSOR_DATA;
-  float temperature;
-  float humidity;
-  float batteryVoltage;
-  char deviceId[16];
-};
 
 #define DHTPIN 4
 #define DHTTYPE DHT11
@@ -26,12 +13,32 @@ struct DataPacket {
 #define VOLTAGE_DIVIDER_RATIO 2.0  // 100kΩ & 100kΩ divider halves the voltage
 #define ADC_MAX_VALUE 1023
 #define REFERENCE_VOLTAGE 3.3  // Reference voltage
+#define DEVICE_ID_LENGTH 16
+#define DEVICE_ID_FILE "/device_id.conf"
+#define MAC_FILE "/hub_mac.conf"
+
+
+enum PacketType {
+  PACKET_TYPE_REQUEST_MAC = 1,
+  PACKET_TYPE_SENSOR_DATA = 2
+};
+
+struct DataPacket {
+  PacketType packetType = PACKET_TYPE_SENSOR_DATA;
+  float temperature;
+  float humidity;
+  float batteryVoltage;
+  char deviceId[DEVICE_ID_LENGTH];
+};
 
 DHT dht(DHTPIN, DHTTYPE);
+AsyncWebServer server(80);
 
-const char *MAC_FILE = "/hub_mac.conf";
+
 uint8_t hubMac[6];
 bool isMacReceived = false;
+char deviceId[DEVICE_ID_LENGTH] = "";
+bool isDeviceIdSet = false;
 const uint64_t deepSleepIntervalMs = 60 * 1000;  // 1 min
 
 
@@ -43,6 +50,13 @@ void printMac(const uint8_t *mac) {
   Serial.println();
 }
 
+void saveDeviceIdToFlash(const char *id) {
+  File file = LittleFS.open(DEVICE_ID_FILE, "w+");
+  if (file) {
+    file.write((const uint8_t *)id, strlen(id));
+    file.close();
+  }
+}
 
 void saveMacToFlash(const uint8_t *mac) {
   File file = LittleFS.open(MAC_FILE, "w+");
@@ -51,7 +65,6 @@ void saveMacToFlash(const uint8_t *mac) {
     file.close();
   }
 }
-
 
 bool loadMacFromFlash(uint8_t *mac) {
   if (!LittleFS.exists(MAC_FILE)) {
@@ -68,6 +81,51 @@ bool loadMacFromFlash(uint8_t *mac) {
   return true;
 }
 
+bool loadDeviceIdFromFlash(char *deviceId) {
+  if (!LittleFS.exists(DEVICE_ID_FILE)) {
+    return false;
+  }
+
+  File file = LittleFS.open(DEVICE_ID_FILE, "r");
+  if (!file) {
+    return false;
+  }
+
+  file.readBytes(deviceId, DEVICE_ID_LENGTH);
+  file.close();
+  return true;
+}
+
+void setupAP() {
+  WiFi.softAP("Node-AP");
+  Serial.print("Access Point Started: ");
+  Serial.println(WiFi.softAPIP());
+}
+
+void setupServer() {
+  setupAP();
+  server.serveStatic("/", LittleFS, "/www/").setDefaultFile("index.html").setCacheControl("max-age=60000");
+
+  server.on("/rest/deviceid", HTTP_GET, [](AsyncWebServerRequest *request) {
+    String response = String(deviceId);
+    request->send(200, "text/plain", response);
+  });
+
+  server.on("/rest/update", HTTP_POST, [](AsyncWebServerRequest *request) {
+    if (!request->hasParam("deviceId")) {
+      request->send(400, "text/plain", "Missing deviceId parameter");
+      return;
+    }
+
+    String newDeviceId = request->getParam("deviceId")->value();
+    Serial.println(newDeviceId);
+    saveDeviceIdToFlash(newDeviceId.c_str());
+    isDeviceIdSet = true;
+    ESP.restart();
+  });
+
+  server.begin();
+}
 
 void onDataReceive(uint8_t *macAddr, uint8_t *incomingData, uint8_t len) {
   Serial.println("Data received");
@@ -139,7 +197,6 @@ float readBatteryVoltage() {
   return voltage;
 }
 
-
 void sendDataToHub() {
   Serial.println("Sending data to hub.");
 
@@ -148,7 +205,7 @@ void sendDataToHub() {
   dataPacket.temperature = dht.readTemperature();
   dataPacket.humidity = dht.readHumidity();
   dataPacket.batteryVoltage = readBatteryVoltage();
-  strncpy(dataPacket.deviceId, "NewDevice123", sizeof(dataPacket.deviceId));
+  strncpy(dataPacket.deviceId, deviceId, sizeof(deviceId));
 
   int status = esp_now_send(hubMac, (uint8_t *)&dataPacket, sizeof(dataPacket));
   if (status != 0) {
@@ -171,6 +228,19 @@ void setup() {
   WiFi.mode(WIFI_STA);
   setupEspNow();
 
+  if (loadDeviceIdFromFlash(deviceId)) {
+    Serial.print("DeviceId Loaded from flash: ");
+    Serial.print(deviceId);
+    isDeviceIdSet = true;
+  } else {
+    Serial.println("Flash does not contain deviceId, setting up webserver");
+    setupServer();
+  }
+
+  if (!isDeviceIdSet) {
+    return;
+  }
+
   if (loadMacFromFlash(hubMac)) {
     Serial.print("Loaded MAC from flash: ");
     printMac(hubMac);
@@ -183,6 +253,10 @@ void setup() {
 
 
 void loop() {
+  if (!isDeviceIdSet) {
+    return;
+  }
+
   if (!isMacReceived) {
     sendMacRequestBroadcast();
     delay(2000);
