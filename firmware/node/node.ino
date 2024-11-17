@@ -12,9 +12,9 @@ enum PacketType {
 
 struct DataPacket {
   PacketType packetType = PACKET_TYPE_SENSOR_DATA;
-  float temperature = 26.0;
-  float humidity = 60.0;
-  float batteryVoltage = 3.7;
+  float temperature;
+  float humidity;
+  float batteryVoltage;
   char deviceId[16];
 };
 
@@ -22,6 +22,7 @@ struct DataPacket {
 const char *MAC_FILE = "/hub_mac.conf";
 uint8_t hubMac[6];
 bool isMacReceived = false;
+const uint64_t deepSleepIntervalMs = 60 * 1000; // 1 min
 
 
 void printMac(const uint8_t *mac) {
@@ -71,7 +72,13 @@ void onDataReceive(uint8_t *macAddr, uint8_t *incomingData, uint8_t len) {
 
 
 void onDataSent(uint8_t *macAddr, uint8_t sendStatus) {
-  Serial.println(sendStatus == 0 ? "Data sent successfully" : "Data send failed");
+  pinMode(LED_BUILTIN, sendStatus == 0 ? LOW : HIGH);
+  if (sendStatus == 0) {
+    Serial.println("Data sent successfully");
+    return;
+  }
+  Serial.print("Data send failed with status: ");
+  Serial.println(sendStatus);
 }
 
 
@@ -118,10 +125,10 @@ void sendMacRequestBroadcast() {
 
 
 void sendDataToHub() {
+  Serial.println("Sending data to hub.");
   DataPacket dataPacket;
   dataPacket.packetType = PACKET_TYPE_SENSOR_DATA;
   strncpy(dataPacket.deviceId, "NewDevice123", sizeof(dataPacket.deviceId));
-  Serial.println("Sending data to hub...");
   int status = esp_now_send(hubMac, (uint8_t *)&dataPacket, sizeof(dataPacket));
   if (status != 0) {
     Serial.print("Error sending data to hub: ");
@@ -131,7 +138,7 @@ void sendDataToHub() {
 
 
 void setup() {
-  // pinMode(LED_BUILTIN, OUTPUT);
+  pinMode(LED_BUILTIN, OUTPUT);
   Serial.begin(115200);
   if (!LittleFS.begin()) {
     Serial.println("Failed to mount LittleFS filesystem");
@@ -156,8 +163,9 @@ void loop() {
     sendMacRequestBroadcast();
     delay(2000);
   } else {
-    Serial.println("MAC address obtained. Ready for direct communication.");
-    delay(5000);
     sendDataToHub();
+    delay(500);
+    Serial.println("Going in deepsleep");
+    ESP.deepSleep(deepSleepIntervalMs * 1000);
   }
 }
