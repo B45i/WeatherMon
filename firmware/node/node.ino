@@ -8,10 +8,11 @@
 
 #define DHTPIN 4
 
-#define BATTERY_PIN A0
-#define VOLTAGE_DIVIDER_RATIO 2.0  // 100kΩ & 100kΩ divider halves the voltage
-#define ADC_MAX_VALUE 1023
-#define REFERENCE_VOLTAGE 3.3  // Reference voltage
+#define BATTERY_PIN A0             // Analog pin for battery voltage reading
+#define REFERENCE_VOLTAGE 3.3      // ESP8266 reference voltage
+#define VOLTAGE_DIVIDER_RATIO 2.0  // Since R1 = R2 = 100k, ratio is 2
+#define CALIBRATION_FACTOR 0.606
+
 #define DEVICE_ID_LENGTH 21
 #define DEVICE_ID_FILE "/device_id.conf"
 #define MAC_FILE "/hub_mac.conf"
@@ -39,6 +40,7 @@ bool isMacReceived = false;
 char deviceId[DEVICE_ID_LENGTH] = "";
 bool isDeviceIdSet = false;
 const uint64_t deepSleepIntervalMs = 60ULL * 60 * 1000;  // 1hr in mills
+
 
 
 
@@ -192,9 +194,9 @@ void sendMacRequestBroadcast() {
 }
 
 float readBatteryVoltage() {
-  int rawValue = analogRead(BATTERY_PIN);
-  float voltage = (rawValue / ADC_MAX_VALUE) * REFERENCE_VOLTAGE * VOLTAGE_DIVIDER_RATIO;
-  return voltage;
+  int sensorValue = analogRead(BATTERY_PIN);
+  float voltage = sensorValue * (REFERENCE_VOLTAGE / 1023.0);
+  return voltage * VOLTAGE_DIVIDER_RATIO * CALIBRATION_FACTOR;
 }
 
 void sendDataToHub() {
@@ -209,7 +211,10 @@ void sendDataToHub() {
   // Serial.print(temperature);
   // Serial.print(" °C\tHumidity: ");
   // Serial.print(humidity);
-  // Serial.println(" %");
+  // Serial.print("Battery: ");
+  // Serial.print(readBatteryVoltage());
+  // Serial.println("v");
+
 
   DataPacket dataPacket = {
     .packetType = PACKET_TYPE_SENSOR_DATA,
@@ -261,6 +266,8 @@ void setup() {
   } else {
     Serial.println("Flash does not contain hub MAC");
   }
+
+  delay(2000);  // For DHT11 Cold start.
 }
 
 void loop() {
