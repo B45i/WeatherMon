@@ -4,10 +4,9 @@
 #include <LittleFS.h>
 #include <ESPAsyncTCP.h>        // https://github.com/me-no-dev/ESPAsyncTCP
 #include <ESPAsyncWebServer.h>  // https://github.com/me-no-dev/ESPAsyncWebServer?tab=readme-ov-file
-#include <DHT.h>
+#include <DHT11.h>              // https://github.com/dhrubasaha08/DHT11
 
 #define DHTPIN 4
-#define DHTTYPE DHT11
 
 #define BATTERY_PIN A0
 #define VOLTAGE_DIVIDER_RATIO 2.0  // 100kΩ & 100kΩ divider halves the voltage
@@ -31,7 +30,7 @@ struct DataPacket {
   char deviceId[DEVICE_ID_LENGTH];
 };
 
-DHT dht(DHTPIN, DHTTYPE);
+DHT11 dht11(DHTPIN);
 AsyncWebServer server(80);
 
 
@@ -39,7 +38,8 @@ uint8_t hubMac[6];
 bool isMacReceived = false;
 char deviceId[DEVICE_ID_LENGTH] = "";
 bool isDeviceIdSet = false;
-const uint64_t deepSleepIntervalMs = 60 * 1000;  // 1 min
+const uint64_t deepSleepIntervalMs = 60ULL * 60 * 1000;  // 1hr in mills
+
 
 
 void printMac(const uint8_t *mac) {
@@ -200,17 +200,22 @@ float readBatteryVoltage() {
 void sendDataToHub() {
   Serial.println("Sending data to hub.");
 
-  // DataPacket dataPacket;
-  // dataPacket.packetType = PACKET_TYPE_SENSOR_DATA;
-  // dataPacket.temperature = dht.readTemperature();
-  // dataPacket.humidity = dht.readHumidity();
-  // dataPacket.batteryVoltage = readBatteryVoltage();
-  // strncpy(dataPacket.deviceId, deviceId, sizeof(deviceId));
+
+  int temperature = 0;
+  int humidity = 0;
+  dht11.readTemperatureHumidity(temperature, humidity);
+
+  // not needed after debug.
+  Serial.print("Temperature: ");
+  Serial.print(temperature);
+  Serial.print(" °C\tHumidity: ");
+  Serial.print(humidity);
+  Serial.println(" %");
 
   DataPacket dataPacket = {
     .packetType = PACKET_TYPE_SENSOR_DATA,
-    .temperature = dht.readTemperature(),
-    .humidity = dht.readHumidity(),
+    .temperature = temperature,
+    .humidity = humidity,
     .batteryVoltage = readBatteryVoltage()
   };
   strncpy(dataPacket.deviceId, deviceId, DEVICE_ID_LENGTH);
@@ -227,7 +232,6 @@ void sendDataToHub() {
 void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
   Serial.begin(115200);
-  dht.begin();
 
   if (!LittleFS.begin()) {
     Serial.println("Failed to mount LittleFS filesystem");
