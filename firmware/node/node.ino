@@ -205,12 +205,11 @@ void sendDataToHub() {
   int humidity = 0;
   dht11.readTemperatureHumidity(temperature, humidity);
 
-  // not needed after debug.
-  Serial.print("Temperature: ");
-  Serial.print(temperature);
-  Serial.print(" °C\tHumidity: ");
-  Serial.print(humidity);
-  Serial.println(" %");
+  // Serial.print("Temperature: ");
+  // Serial.print(temperature);
+  // Serial.print(" °C\tHumidity: ");
+  // Serial.print(humidity);
+  // Serial.println(" %");
 
   DataPacket dataPacket = {
     .packetType = PACKET_TYPE_SENSOR_DATA,
