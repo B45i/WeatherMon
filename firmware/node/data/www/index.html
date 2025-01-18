@@ -3,144 +3,215 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Device ID Setup</title>
-    <script>
-      function submitDeviceId() {
-        const deviceIdInput = document.getElementById("deviceId");
-        const deviceId = deviceIdInput.value.trim();
-
-        // Validation
-        if (!deviceId) {
-          showMessage("Please enter a Device ID", "error");
-          return;
-        }
-
-        if (deviceId.length < 3) {
-          showMessage("Device ID must be at least 3 characters", "error");
-          return;
-        }
-
-        if (!/^[a-zA-Z0-9-_]+$/.test(deviceId)) {
-          showMessage(
-            "Device ID can only contain letters, numbers, hyphens and underscores",
-            "error"
-          );
-          return;
-        }
-
-        fetch(`/rest/update?deviceId=${deviceId}`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "text/plain",
-          },
-        })
-          .then((response) => response.text())
-          .then((data) => {
-            showMessage("Device ID saved: " + deviceId, "success");
-          })
-          .catch((err) => showMessage("Error: " + err, "error"));
-      }
-
-      function showMessage(message, type) {
-        const messageEl = document.getElementById("message");
-        messageEl.textContent = message;
-        messageEl.style.backgroundColor =
-          type === "error" ? "#fee2e2" : "#dcfce7";
-        messageEl.style.color = type === "error" ? "#991b1b" : "#166534";
-        messageEl.style.display = "block";
-        setTimeout(() => {
-          messageEl.style.display = "none";
-        }, 3000);
-      }
-    </script>
+    <title>ESP8266 Config</title>
     <style>
-      body {
-        margin: 0;
-        min-height: 100vh;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-          sans-serif;
-        background-color: #f3f4f6;
+      :root {
+        --bg-color: #121212;
+        --text-color: #e0e0e0;
+        --input-bg: #1e1e1e;
+        --input-border: #2e7d32;
+        --button-bg: #4caf50;
+        --button-hover: #45a049;
+        --header-color: #66bb6a;
       }
 
-      .card {
-        background: white;
-        padding: 2rem;
-        border-radius: 12px;
-        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-        width: 90%;
-        max-width: 400px;
+      body {
+        font-family: sans-serif;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        line-height: 1.6;
       }
 
       h1 {
-        margin: 0 0 1.5rem 0;
-        color: #1f2937;
-        font-size: 1.5rem;
-        font-weight: 600;
+        text-align: center;
+        color: var(--header-color);
+        font-size: 2.5rem;
+        margin-bottom: 2rem;
       }
 
-      input {
+      label {
+        display: block;
+        margin: 15px 0 5px;
+        font-weight: bold;
+        color: var(--header-color);
+      }
+
+      input[type="text"],
+      input[type="number"],
+      input[type="password"] {
         width: 100%;
-        padding: 0.75rem;
-        margin-bottom: 1rem;
-        border: 1px solid #d1d5db;
-        border-radius: 6px;
+        padding: 12px;
+        margin-bottom: 20px;
+        border: 2px solid var(--input-border);
+        border-radius: 8px;
+        background-color: var(--input-bg);
+        color: var(--text-color);
+        transition: border-color 0.3s, box-shadow 0.3s;
         font-size: 1rem;
-        box-sizing: border-box;
-        outline: none;
-        transition: border-color 0.15s ease;
       }
 
-      input:focus {
-        border-color: #2563eb;
-        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+      input[type="text"]:focus,
+      input[type="number"]:focus,
+      input[type="password"]:focus {
+        outline: none;
+        border-color: var(--button-bg);
+        box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.5);
+      }
+
+      input::placeholder {
+        color: rgba(224, 224, 224, 0.6);
       }
 
       button {
+        display: block;
         width: 100%;
-        padding: 0.75rem;
-        background-color: #2563eb;
-        color: white;
+        padding: 14px;
+        background-color: var(--button-bg);
+        color: var(--bg-color);
         border: none;
-        border-radius: 6px;
-        font-size: 1rem;
-        font-weight: 500;
+        border-radius: 8px;
         cursor: pointer;
-        transition: background-color 0.15s ease;
+        font-size: 1.1rem;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        transition: background-color 0.3s, transform 0.1s;
       }
 
       button:hover {
-        background-color: #1d4ed8;
+        background-color: var(--button-hover);
+        transform: translateY(-2px);
       }
 
       button:active {
-        background-color: #1e40af;
+        transform: translateY(0);
       }
 
-      #message {
-        display: none;
-        padding: 0.75rem;
-        border-radius: 6px;
-        margin-bottom: 1rem;
-        font-size: 0.875rem;
+      @media (max-width: 600px) {
+        body {
+          padding: 15px;
+        }
+        h1 {
+          font-size: 2rem;
+        }
       }
     </style>
   </head>
   <body>
-    <div class="card">
-      <h1>Enter Device ID</h1>
-      <div id="message"></div>
+    <h1>ESP8266 Configuration</h1>
+    <form id="configForm">
+      <label for="deviceId">Device ID</label>
       <input
         type="text"
         id="deviceId"
+        name="deviceId"
         placeholder="Enter Device ID"
         required
-        pattern="[a-zA-Z0-9-_]+"
-        minlength="3"
       />
-      <button onclick="submitDeviceId()">Save Device ID</button>
-    </div>
+
+      <label for="wifi_ssid">WiFi SSID</label>
+      <input
+        type="text"
+        id="wifi_ssid"
+        name="wifi_ssid"
+        placeholder="Enter WiFi SSID"
+        required
+      />
+
+      <label for="wifi_password">WiFi Password</label>
+      <input
+        type="password"
+        id="wifi_password"
+        name="wifi_password"
+        placeholder="Enter WiFi Password"
+        required
+      />
+
+      <label for="serverUrl">Server URL</label>
+      <input
+        type="text"
+        id="serverUrl"
+        name="serverUrl"
+        placeholder="Enter Server URL"
+        required
+      />
+
+      <label for="calibrationFactor">Calibration Factor</label>
+      <input
+        type="number"
+        id="calibrationFactor"
+        name="calibrationFactor"
+        step="0.001"
+        placeholder="Enter Calibration Factor"
+        required
+      />
+
+      <label for="deepSleepInterval">Deep Sleep Interval (seconds)</label>
+      <input
+        type="number"
+        id="deepSleepInterval"
+        name="deepSleepInterval"
+        placeholder="Enter Deep Sleep Interval"
+        required
+      />
+
+      <button type="submit">Save Configuration</button>
+    </form>
+
+    <script>
+      const apiUrl = "/api/config";
+
+      // Fetch the current configuration on page load
+      document.addEventListener("DOMContentLoaded", async () => {
+        try {
+          const response = await fetch(apiUrl);
+          const data = await response.json();
+          document.getElementById("deviceId").value = data.deviceId || "";
+          document.getElementById("wifi_ssid").value = data.wifi_ssid || "";
+          document.getElementById("wifi_password").value =
+            data.wifi_password || "";
+          document.getElementById("serverUrl").value = data.serverUrl || "";
+          document.getElementById("calibrationFactor").value =
+            data.calibrationFactor || 0;
+          document.getElementById("deepSleepInterval").value =
+            data.deepSleepInterval || 0;
+        } catch (error) {
+          console.error("Error fetching configuration:", error);
+        }
+      });
+
+      // Handle form submission to update the configuration
+      document
+        .getElementById("configForm")
+        .addEventListener("submit", async (event) => {
+          event.preventDefault();
+
+          const formData = new FormData(event.target);
+          const config = {};
+          formData.forEach((value, key) => {
+            config[key] = value;
+          });
+
+          try {
+            const response = await fetch(apiUrl, {
+              method: "POST",
+              headers: { "Content-Type": "application/x-www-form-urlencoded" },
+              body: new URLSearchParams(config),
+            });
+
+            if (response.ok) {
+              alert("Configuration saved successfully!");
+            } else {
+              alert("Failed to save configuration");
+            }
+          } catch (error) {
+            console.error("Error saving configuration:", error);
+            alert("Error saving configuration");
+          }
+        });
+    </script>
   </body>
 </html>
