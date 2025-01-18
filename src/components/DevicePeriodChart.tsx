@@ -14,7 +14,6 @@ const DEFAULT_CHART_OPTIONS = {
       },
     },
   },
-
   grid: {
     top: "5%",
     left: "5px",
@@ -79,7 +78,6 @@ export const DevicePeriodChart = ({
         {
           name: "Temperature",
           type: "line",
-          stack: "Total",
           smooth: true,
           areaStyle: {},
           emphasis: {
@@ -90,7 +88,6 @@ export const DevicePeriodChart = ({
         {
           name: "Humidity",
           type: "line",
-          stack: "Total",
           smooth: true,
           areaStyle: {},
           emphasis: {
@@ -101,7 +98,6 @@ export const DevicePeriodChart = ({
         {
           name: "Battery",
           type: "line",
-          stack: "Total",
           smooth: true,
           areaStyle: {},
           emphasis: {
