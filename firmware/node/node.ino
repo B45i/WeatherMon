@@ -1,287 +1,200 @@
-// ESP8266 Node.
 #include <ESP8266WiFi.h>
-#include <espnow.h>
+#include <ESP8266HTTPClient.h>
 #include <LittleFS.h>
-#include <ESPAsyncTCP.h>        // https://github.com/me-no-dev/ESPAsyncTCP
-#include <ESPAsyncWebServer.h>  // https://github.com/me-no-dev/ESPAsyncWebServer?tab=readme-ov-file
-#include <DHT11.h>              // https://github.com/dhrubasaha08/DHT11
+#include <ESPAsyncTCP.h>
+#include <ESPAsyncWebServer.h>
+#include <DHT11.h>
 
+// Pin Definitions
 #define DHTPIN 4
+#define BATTERY_PIN A0
+#define CONFIG_PIN 5
 
-#define BATTERY_PIN A0             // Analog pin for battery voltage reading
-#define REFERENCE_VOLTAGE 3.3      // ESP8266 reference voltage
-#define VOLTAGE_DIVIDER_RATIO 2.0  // Since R1 = R2 = 100k, ratio is 2
-#define CALIBRATION_FACTOR 0.606
-
+// Constants
 #define DEVICE_ID_LENGTH 21
-#define DEVICE_ID_FILE "/device_id.conf"
-#define MAC_FILE "/hub_mac.conf"
+#define CONFIG_FILE "/config.json"
 
+// Default values
+#define DEFAULT_SLEEP_INTERVAL 3600
+#define DEFAULT_CALIBRATION 0.606
+#define DEFAULT_SERVER_URL "https://example.com/api/logSensorData"
 
-enum PacketType {
-  PACKET_TYPE_REQUEST_MAC = 1,
-  PACKET_TYPE_SENSOR_DATA = 2
-};
-
-struct DataPacket {
-  PacketType packetType = PACKET_TYPE_SENSOR_DATA;
-  float temperature;
-  float humidity;
-  float batteryVoltage;
-  char deviceId[DEVICE_ID_LENGTH];
+struct Config {
+  char deviceId[DEVICE_ID_LENGTH] = "";
+  char wifi_ssid[32] = "";
+  char wifi_password[64] = "";
+  char serverUrl[128] = DEFAULT_SERVER_URL;
+  float calibrationFactor = DEFAULT_CALIBRATION;
+  uint32_t deepSleepInterval = DEFAULT_SLEEP_INTERVAL;
 };
 
 DHT11 dht11(DHTPIN);
 AsyncWebServer server(80);
+Config config;
 
+// Function declarations
+void saveConfig();
+bool loadConfig();
+void setupAP();
+void setupServer();
+bool connectWiFi();
+void sendDataToServer();
+void toggleLED(bool state);
 
-uint8_t hubMac[6];
-bool isMacReceived = false;
-char deviceId[DEVICE_ID_LENGTH] = "";
-bool isDeviceIdSet = false;
-const uint64_t deepSleepIntervalMs = 60ULL * 60 * 1000;  // 1hr in mills
-
-
-
-
-void printMac(const uint8_t *mac) {
-  for (int i = 0; i < 6; i++) {
-    Serial.printf("%02X", mac[i]);
-    if (i < 5) Serial.print(":");
-  }
-  Serial.println();
+float readBatteryVoltage() {
+  int sensorValue = analogRead(BATTERY_PIN);
+  float voltage = sensorValue * (3.3 / 1023.0);
+  return voltage * 2.0 * config.calibrationFactor;
 }
 
-void saveDeviceIdToFlash(const char *id) {
-  File file = LittleFS.open(DEVICE_ID_FILE, "w+");
-  if (file) {
-    file.write((const uint8_t *)id, strlen(id));
-    file.close();
-  }
-}
-
-void saveMacToFlash(const uint8_t *mac) {
-  File file = LittleFS.open(MAC_FILE, "w+");
-  if (file) {
-    file.write(mac, 6);
-    file.close();
-  }
-}
-
-bool loadMacFromFlash(uint8_t *mac) {
-  if (!LittleFS.exists(MAC_FILE)) {
-    return false;
-  }
-
-  File file = LittleFS.open(MAC_FILE, "r");
+void saveConfig() {
+  File file = LittleFS.open(CONFIG_FILE, "w");
   if (!file) {
-    return false;
+    Serial.println("Failed to open config file for writing");
+    return;
   }
-
-  file.read(mac, 6);
+  file.write((uint8_t *)&config, sizeof(Config));
   file.close();
-  return true;
 }
 
-bool loadDeviceIdFromFlash(char *deviceId) {
-  if (!LittleFS.exists(DEVICE_ID_FILE)) {
+bool loadConfig() {
+  if (!LittleFS.exists(CONFIG_FILE)) {
+    Serial.println("Config file not found");
     return false;
   }
-
-  File file = LittleFS.open(DEVICE_ID_FILE, "r");
+  File file = LittleFS.open(CONFIG_FILE, "r");
   if (!file) {
+    Serial.println("Failed to open config file");
     return false;
   }
-
-  file.readBytes(deviceId, DEVICE_ID_LENGTH);
+  size_t read = file.readBytes((char *)&config, sizeof(Config));
   file.close();
-  return true;
+  return read == sizeof(Config);
 }
 
 void setupAP() {
-  WiFi.softAP("Node-AP");
-  Serial.print("Access Point Started: ");
+  WiFi.mode(WIFI_AP);
+  WiFi.softAP("ESP8266-Config");
+  toggleLED(true);
+  Serial.print("AP IP address: ");
   Serial.println(WiFi.softAPIP());
 }
 
 void setupServer() {
-  setupAP();
   server.serveStatic("/", LittleFS, "/www/").setDefaultFile("index.html").setCacheControl("max-age=60000");
-
-  server.on("/rest/deviceid", HTTP_GET, [](AsyncWebServerRequest *request) {
-    String response = String(deviceId);
-    request->send(200, "text/plain", response);
+  server.on("/api/config", HTTP_GET, [](AsyncWebServerRequest *request) {
+    String json = "{\"deviceId\":\"" + String(config.deviceId) + "\","
+                  "\"wifi_ssid\":\"" + String(config.wifi_ssid) + "\","
+                  "\"wifi_password\":\"" + String(config.wifi_password) + "\","
+                  "\"serverUrl\":\"" + String(config.serverUrl) + "\","
+                  "\"calibrationFactor\":" + String(config.calibrationFactor, 6) + ","
+                  "\"deepSleepInterval\":" + String(config.deepSleepInterval) + "}";
+    request->send(200, "application/json", json);
   });
 
-  server.on("/rest/update", HTTP_POST, [](AsyncWebServerRequest *request) {
-    if (!request->hasParam("deviceId")) {
-      request->send(400, "text/plain", "Missing deviceId parameter");
-      return;
+  server.on("/api/config", HTTP_POST, [](AsyncWebServerRequest *request) {
+    if (request->hasParam("deviceId", true)) {
+      strncpy(config.deviceId, request->getParam("deviceId", true)->value().c_str(), DEVICE_ID_LENGTH);
     }
-
-    String newDeviceId = request->getParam("deviceId")->value();
-    Serial.println(newDeviceId);
-    saveDeviceIdToFlash(newDeviceId.c_str());
-    isDeviceIdSet = true;
-    ESP.restart();
+    if (request->hasParam("wifi_ssid", true)) {
+      strncpy(config.wifi_ssid, request->getParam("wifi_ssid", true)->value().c_str(), 32);
+    }
+    if (request->hasParam("wifi_password", true)) {
+      strncpy(config.wifi_password, request->getParam("wifi_password", true)->value().c_str(), 64);
+    }
+    if (request->hasParam("serverUrl", true)) {
+      strncpy(config.serverUrl, request->getParam("serverUrl", true)->value().c_str(), 128);
+    }
+    if (request->hasParam("calibrationFactor", true)) {
+      config.calibrationFactor = request->getParam("calibrationFactor", true)->value().toFloat();
+    }
+    if (request->hasParam("deepSleepInterval", true)) {
+      config.deepSleepInterval = request->getParam("deepSleepInterval", true)->value().toInt();
+    }
+    saveConfig();
+    request->send(200, "text/plain", "Configuration updated");
   });
 
   server.begin();
+  toggleLED(true);
 }
 
-void onDataReceive(uint8_t *macAddr, uint8_t *incomingData, uint8_t len) {
-  Serial.println("Data received");
-  if (len == 6) {
-    memcpy(hubMac, incomingData, 6);
-    isMacReceived = true;
-    Serial.println("MAC address received from HUB:");
-    saveMacToFlash(hubMac);
-    printMac(hubMac);
+bool connectWiFi() {
+  if (strlen(config.wifi_ssid) == 0) return false;
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(config.wifi_ssid, config.wifi_password);
+  int attempts = 0;
+  while (WiFi.status() != WL_CONNECTED && attempts < 20) {
+    delay(500);
+    Serial.print(".");
+    attempts++;
   }
+  return WiFi.status() == WL_CONNECTED;
 }
 
-
-void onDataSent(uint8_t *macAddr, uint8_t sendStatus) {
-  pinMode(LED_BUILTIN, sendStatus == 0 ? LOW : HIGH);
-  if (sendStatus == 0) {
-    Serial.println("Data sent successfully");
-    return;
-  }
-  Serial.print("Data send failed with status: ");
-  Serial.println(sendStatus);
-}
-
-
-void setupEspNow() {
-  Serial.println("Setting up ESP-NOW");
-  if (esp_now_init() != 0) {
-    Serial.println("Error initializing ESP-NOW");
-    return;
-  }
-  esp_now_set_self_role(ESP_NOW_ROLE_COMBO);
-  esp_now_register_recv_cb(onDataReceive);
-  esp_now_register_send_cb(onDataSent);
-  Serial.println("ESP-NOW ready");
-}
-
-
-bool addPeer(uint8_t *macAddress) {
-  if (esp_now_is_peer_exist(macAddress)) {
-    Serial.println("Peer exists.");
-    return true;
-  }
-  if (esp_now_add_peer(macAddress, ESP_NOW_ROLE_COMBO, 1, NULL, 0) != 0) {
-    Serial.println("Failed to add peer.");
-    return false;
-  }
-  Serial.println("Peer added.");
-  return true;
-}
-
-
-void sendMacRequestBroadcast() {
-  Serial.println("Sending broadcast to request MAC address...");
-  uint8_t broadcastAddress[] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
-  addPeer(broadcastAddress);
-
-  DataPacket dataPacket;
-  dataPacket.packetType = PACKET_TYPE_REQUEST_MAC;
-  int status = esp_now_send(broadcastAddress, (uint8_t *)&dataPacket, sizeof(dataPacket));
-  if (status != 0) {
-    Serial.print("Error sending MAC request: ");
-    Serial.println(status);
-  }
-}
-
-float readBatteryVoltage() {
-  int sensorValue = analogRead(BATTERY_PIN);
-  float voltage = sensorValue * (REFERENCE_VOLTAGE / 1023.0);
-  return voltage * VOLTAGE_DIVIDER_RATIO * CALIBRATION_FACTOR;
-}
-
-void sendDataToHub() {
-  Serial.println("Sending data to hub.");
-
-
+void sendDataToServer() {
   int temperature = 0;
   int humidity = 0;
   dht11.readTemperatureHumidity(temperature, humidity);
+  float battery = readBatteryVoltage();
 
-  // Serial.print("Temperature: ");
-  // Serial.print(temperature);
-  // Serial.print(" °C\tHumidity: ");
-  // Serial.print(humidity);
-  // Serial.print("Battery: ");
-  // Serial.print(readBatteryVoltage());
-  // Serial.println("v");
+  WiFiClientSecure client;
+  client.setInsecure();
 
+  HTTPClient http;
+  http.begin(client, config.serverUrl);
+  http.addHeader("Content-Type", "application/json");
 
-  DataPacket dataPacket = {
-    .packetType = PACKET_TYPE_SENSOR_DATA,
-    .temperature = temperature,
-    .humidity = humidity,
-    .batteryVoltage = readBatteryVoltage()
-  };
-  strncpy(dataPacket.deviceId, deviceId, DEVICE_ID_LENGTH);
-  dataPacket.deviceId[DEVICE_ID_LENGTH - 1] = '\0';  // Ensure null-termination
+  String jsonData = "{\"deviceId\":\"" + String(config.deviceId) + "\","
+                    "\"temperature\":" + String(temperature) + ","
+                    "\"humidity\":" + String(humidity) + ","
+                    "\"battery\":" + String(battery, 2) + "}";
 
-  int status = esp_now_send(hubMac, (uint8_t *)&dataPacket, sizeof(dataPacket));
-  if (status != 0) {
-    Serial.print("Error sending data to hub: ");
-    Serial.println(status);
+  int httpCode = http.POST(jsonData);
+  if (httpCode > 0) {
+    Serial.printf("HTTP Response code: %d\n", httpCode);
+  } else {
+    Serial.printf("HTTP Request failed: %s\n", http.errorToString(httpCode).c_str());
   }
+  http.end();
 }
 
+void toggleLED(bool state) {
+  digitalWrite(LED_BUILTIN, state ? LOW : HIGH);
+}
 
 void setup() {
-  pinMode(LED_BUILTIN, OUTPUT);
   Serial.begin(115200);
+  Serial.println("");
+  pinMode(CONFIG_PIN, INPUT_PULLUP);
+  pinMode(LED_BUILTIN, OUTPUT);
+  toggleLED(false);
 
   if (!LittleFS.begin()) {
-    Serial.println("Failed to mount LittleFS filesystem");
+    Serial.println("Failed to mount file system");
     return;
   }
 
-  WiFi.mode(WIFI_STA);
-  setupEspNow();
+  loadConfig();
 
-  if (loadDeviceIdFromFlash(deviceId)) {
-    Serial.print("DeviceId Loaded from flash: ");
-    Serial.println(deviceId);
-    isDeviceIdSet = true;
+  if (digitalRead(CONFIG_PIN) == LOW || strlen(config.deviceId) == 0) {
+    Serial.println("Entering configuration mode");
+    setupAP();
+    setupServer();
+    return;
+  }
+
+  if (connectWiFi()) {
+    sendDataToServer();
+    delay(100);
+    ESP.deepSleep(config.deepSleepInterval * 1000000ULL);
   } else {
-    Serial.println("Flash does not contain deviceId, setting up webserver");
+    Serial.println("WiFi connection failed");
+    setupAP();
     setupServer();
   }
-
-  if (!isDeviceIdSet) {
-    return;
-  }
-
-  if (loadMacFromFlash(hubMac)) {
-    Serial.print("Loaded MAC from flash: ");
-    printMac(hubMac);
-    addPeer(hubMac);
-    isMacReceived = true;
-  } else {
-    Serial.println("Flash does not contain hub MAC");
-  }
-
-  delay(2000);  // For DHT11 Cold start.
 }
 
 void loop() {
-  if (!isDeviceIdSet) {
-    return;
-  }
-
-  if (!isMacReceived) {
-    sendMacRequestBroadcast();
-    delay(2000);
-  } else {
-    sendDataToHub();
-    delay(500);
-    Serial.println("Going in deepsleep");
-    ESP.deepSleep(deepSleepIntervalMs * 1000);
-  }
+  // Empty as deep sleep is used
 }
